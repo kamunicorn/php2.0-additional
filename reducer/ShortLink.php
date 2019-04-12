@@ -14,8 +14,21 @@
 5. должна быть хотя бы минимальная проверка на вводимое пользователем значение с помощью регулярного выражения
 (похоже оно (значение) на ссылку или нет, если нет - асинхронно вывести предупреждение об этом)*/
 
+//$config = require_once 'config.php';
+//$type = $config['type'];
+//var_dump($config);
+
+
 interface iConnectionDatabase
 {
+    const DB_NAME = 'reducer';
+    const DB_ROOT = 'root';
+    const DB_PASS = '';
+
+    /*const DB_NAME = 'vera_reducer';
+    const DB_ROOT = 'vera_root';
+    const DB_PASS = 'root';*/
+
     public static function createTable();
     public static function connectToDatabase();
     public static function getRow($columnName, $value);
@@ -146,7 +159,7 @@ class ShortURL implements iConnectionDatabase, iGiveResponse
     {
         self::connectToDatabase();
         self::createTable();
-        $query = "USE reducer; INSERT INTO links (base_url, short_url, url_key) VALUES ('$this->baseURL', '$this->shortURL', '$this->URLKey');";
+        $query = "USE " . self::DB_NAME . "; INSERT INTO links (base_url, short_url, url_key) VALUES ('$this->baseURL', '$this->shortURL', '$this->URLKey');";
         $result = self::$connection->query($query);
 //        print_result($query, $result->fetch(PDO::FETCH_ASSOC));
     }
@@ -170,7 +183,7 @@ class ShortURL implements iConnectionDatabase, iGiveResponse
 
     public static function createTable()
     {
-        $query = 'USE reducer; CREATE TABLE IF NOT EXISTS links (' .
+        $query = 'USE ' . self::DB_NAME . '; CREATE TABLE IF NOT EXISTS links (' .
             'id int NOT NULL PRIMARY KEY AUTO_INCREMENT,' .
             'base_url varchar(255) UNIQUE,' .
             'short_url varchar(30) UNIQUE,' .
@@ -185,10 +198,9 @@ class ShortURL implements iConnectionDatabase, iGiveResponse
     }
     public static function connectToDatabase()
     {
-        self::$connection = new PDO('mysql: host=localhost; dbname=reducer; charset=utf8', 'root', '');
+        self::$connection = new PDO('mysql: host=localhost; dbname=' . self::DB_NAME . '; charset=utf8', self::DB_ROOT , self::DB_PASS);
     }
 }
-
 
 function generate_random_string($required_length)
 {
