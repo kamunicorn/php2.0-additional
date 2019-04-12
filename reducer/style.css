@@ -1,0 +1,50 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: snow;
+}
+.main-wrapper {
+    max-width: 100%;
+    width: 768px;
+    margin: auto;
+}
+h1 {
+    margin: 60px auto 30px;
+    text-align: center;
+    color: steelblue;
+}
+.form-reducer {
+    display: flex;
+    justify-content: space-between;
+}
+.form-reducer__link {
+    width: 60%;
+    padding: 10px;
+    font-size: 16px;
+}
+.form-reducer__button {
+    width: 35%;
+    font-size: 16px;
+    background-color: steelblue;
+    color: white;
+    border: none;
+    outline: none;
+    font-weight: bold;
+}
+.response {
+    margin: 40px auto;
+}
+.response__message {
+    margin-bottom: 20px;
+    text-align: center;
+    color: steelblue;
+    font-weight: bold;
+}
+.response__base-url {
+    width: 49%;
+    float: left;
+}
+.response__short-url {
+    width: 49%;
+    float: right;
+    text-align: right;
+}
