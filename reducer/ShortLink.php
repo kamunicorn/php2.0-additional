@@ -170,8 +170,16 @@ class ShortURL implements iConnectionDatabase, iGiveResponse
         $query = "SELECT * FROM links WHERE $columnName='$value';";
 
         if (self::$connection) {
+            /*$result = self::$connection->query($query);
+            $result = $result->fetch(PDO::FETCH_ASSOC);*/
+
             $result = self::$connection->query($query);
+            if ($result == FALSE) {
+                self::giveResponse(['error', 'Эта противная ошибка']);
+                return FALSE;
+            }
             $result = $result->fetch(PDO::FETCH_ASSOC);
+            
 //            print_result($query, $result);
             if ($result) {
                 return TRUE;
