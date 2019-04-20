@@ -7,13 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // отправляет данные в formData, атрибут data - необязателен (данные, которые надо отправить дополнительно к данным с формы), форма - this
 function submitForm() {
-    let url_base = document.getElementById('url_base').value,
+    let base_url = document.getElementById('base_url').value,
         request = new XMLHttpRequest();
 
-    request.open('POST', 'handler.php');
+    request.open('POST', 'r.php');
     request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    request.send('url_base=' + encodeURIComponent(url_base));
-    console.log('url_base=' + encodeURIComponent(url_base));
+    request.send('base_url=' + encodeURIComponent(base_url));
 
     request.onreadystatechange = function() {
         if (request.readyState === 4 && request.status === 200) {
@@ -28,21 +27,24 @@ function showResponse(responseText) {
         baseURL = responseBox.querySelector('.response__base-url'),
         shortURL = responseBox.querySelector('.response__short-url');
 
-    if (responseText[0] === '<') {
-        message.innerHTML = responseText;
-    } else if (responseText === '' || responseText === 'null') {
-        message.textContent = 'Нет ответа!';
-    } else {
-        json = JSON.parse(responseText);
+    baseURL.innerHTML = '';
+    shortURL.innerHTML = '';
+
+    if (responseText[0] === '{') {
+        let json = JSON.parse(responseText);
         if (json['type'] === 'error') {
             message.textContent = json['message'];
         } else if (json['type'] === 'OK') {
             message.textContent = json['message'];
-            baseURL.innerHTML = wrapLink('Исходная ссылка', json['data']['base_url']);
-            shortURL.innerHTML = wrapLink('Короткая ссылка', json['data']['short_url']);
-        } else {
-            responseBox.textContent = responseText;
+            baseURL.innerHTML = wrapLink('Исходная ссылка', json['data']['baseURL']);
+            shortURL.innerHTML = wrapLink('Короткая ссылка', json['data']['shortURL']);
         }
+    } else if (responseText[0] === '<') {
+        // message.innerHTML = responseText;
+        // message.textContent = 'Ошибка на стороне сервера!';
+        message.textContent = 'Ссылка не действительна от слова совсем - нет такого домена!';
+    } else if (responseText === '' || responseText === 'null') {
+        message.textContent = 'Нет ответа!';
     }
 }
 

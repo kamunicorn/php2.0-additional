@@ -17,13 +17,12 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Укротитель ссылок</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js"></script>
 </head>
 <body>
     <div class="main-wrapper">
         <h1>Укротитель ссылок</h1>
-        <form class="form-reducer" action="handler.php" target="_self" method="post">
-            <input class="form-reducer__link" id="url_base" type="text" name="url_base" placeholder="Вставьте исходную ссылку">
+        <form class="form-reducer" action="r.php" target="_self" method="post">
+            <input class="form-reducer__link" id="base_url" type="text" name="base_url" placeholder="Вставьте исходную ссылку">
             <input class="form-reducer__button" type="submit" value="Сократить!">
         </form>
         <div class="response">
@@ -33,5 +32,6 @@
         </div>
     </div>
 
+    <script src="script.js"></script>
 </body>
 </html>

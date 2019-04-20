@@ -11,28 +11,29 @@
  * Date: 11.04.2019
  * Time: 21:29
  */
-/*Создать сервис коротких ссылок (простейший аналог https://bitly.com/, форма - кнопка - вывод короткой ссылки)
-Требования:
-1. основная логика лежит на ООП (простыми словами, нужен класс с методами)
-2. в одном из методов должна быть логика создания таблицы со ссылками, если она еще не была создана
-3. форма отправляется асинхронно, без перезагрузки страницы (ввел ссылку - без перезагрузки страницы получил короткую ссылку)
-4. чистый код с комментариями, без костылей и мусора, понятная структура, приятная архитектура
-5. должна быть хотя бы минимальная проверка на вводимое пользователем значение с помощью регулярного выражения
-(похоже оно (значение) на ссылку или нет, если нет - асинхронно вывести предупреждение об этом)*/
 
 require 'ShortLink.php';
 
 if (isset($_GET['url_key'])) {
-    $str = $_GET['url_key'];
-    if (!is_valid_url_key($str)) {
-        echo "Это не ключ!";
-    } elseif (! ShortURL::hasInDatabase('url_key', $str)) {
+    $url_key = $_GET['url_key'];
+    if (! URL::isValidURLKey($url_key)) {
+        echo "Это неверный ключ!";
+    } elseif (! ShortURL::hasInDatabase('url_key', $url_key) ) {
         echo "По такому ключу нет ссылки!";
     } else {
-        $baseLink = ShortURL::getBaseURL($str);
-        header('Location: ' . $baseLink);
+        $base_url = ShortURL::findBaseURL($url_key);
+        header('Location: ' . $base_url);
     }
 }
 
+if (isset($_POST['base_url'])) {
+    if (! URL::isValidURL($_POST['base_url'])) {
+        ShortURL::giveResponse(['type' => 'error', 'message' => 'Строка не является ссылкой! Вставьте ссылку в формате http://site.com/path/file']);
+    } elseif (! URL::isActiveURL($_POST['base_url'])) {
+        ShortURL::giveResponse(['type' => 'error', 'message' => 'Ссылка не действительна :(']);
+    } else {
+        $short_link = new ShortURL($_POST['base_url']);
+    }
+}
 
 ?>

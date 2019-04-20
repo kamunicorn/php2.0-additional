@@ -14,11 +14,6 @@
 5. должна быть хотя бы минимальная проверка на вводимое пользователем значение с помощью регулярного выражения
 (похоже оно (значение) на ссылку или нет, если нет - асинхронно вывести предупреждение об этом)*/
 
-//$config = require_once 'config.php';
-//$type = $config['type'];
-//var_dump($config);
-
-
 interface iConnectionDatabase
 {
     const DB_NAME = 'reducer';
@@ -31,9 +26,8 @@ interface iConnectionDatabase
 
     public static function createTable();
     public static function connectToDatabase();
-    public static function getRow($columnName, $value);
     public function insert();
-//    public static function isExistsInDatabase($columnName, $value);
+    public static function hasInDatabase(string $columnName, string $value);
 }
 
 interface iGiveResponse
@@ -41,56 +35,40 @@ interface iGiveResponse
     public static function giveResponse($to_response);
 }
 
-interface iDiagnostic
+class ShortURL extends URL implements iConnectionDatabase, iGiveResponse
 {
-    public function print_message($message_text);
-}
+//    режим, когда выдается ссылка вида bit.ly/qwerty (TRUE), а не bit.ly/r.php?url_key=qwerty (FALSE)
+    const SUPER_SHORT_URL_MODE = FALSE;
+//    длина рандомной строки
+    const LENGTH = 10;
 
-class ShortURL implements iConnectionDatabase, iGiveResponse
-{
-    private static $connection;
+    public static $connection;
     public $baseURL;
     public $URLKey;
     public $shortURL;
-    const LENGTH = 10;
 
-    public function __construct($baseURL)
+    public function __construct(string $baseURL)
     {
         if (self::hasInDatabase('base_url', $baseURL)) {
-            $this->getShortUrl($baseURL);
-            /*self::giveResponse(['error', "Ссылка уже сформирована! \"$baseURL\" уже существует в базе данных. " .
-                "Ее сокращенная ссылка = " . self::getShortUrl($baseURL)]);*/
-            self::giveResponse(['OK', "Ссылка уже сформирована!", 'data' => [
-                'base_url' => $baseURL, 'short_url' => self::getShortUrl($baseURL)]
-            ]);
+            $this->baseURL = $baseURL;
+            $this->URLKey = $this->findURLKey($baseURL);
+            $message = "Ссылка уже сформирована!";
+            $this->shortURL = $this->createShortURL($this->URLKey);
         } else {
             $this->baseURL = $baseURL;
             $this->URLKey = $this->createURLKey();
+            $message = "Ссылка сформирована!";
             $this->shortURL = $this->createShortURL($this->URLKey);
             $this->insert();
-//            echo $this;
-            self::giveResponse($this);
         }
-    }
-    public function __toString()
-    {
-        return "baseURL = $this->baseURL<br>URLKey = $this->URLKey<br>shortURL = $this->shortURL<br>";
-    }
-
-    private function createShortURL($URLKey)
-    {
-        return "r.php?url_key=$URLKey";
+        self::giveResponse([
+            'type' => 'OK',
+            'message' => $message,
+            'data' => $this
+        ]);
     }
 
-    private function createURLKey()
-    {
-        $random_string = null;
-        do {
-            $random_string = generate_random_string(self::LENGTH);
-        } while (self::hasInDatabase('url_key', $random_string));
-        return $random_string;
-    }
-
+    //    выдает ответ в json (ошибки, сообщения, данные)
     public static function giveResponse($to_response)
     {
         $response = null;
@@ -99,151 +77,140 @@ class ShortURL implements iConnectionDatabase, iGiveResponse
                 'type' => 'OK',
                 'message' => 'Ссылка сформирована!',
                 'data' => [
-                    'base_url' => $to_response->baseURL,
-                    'short_url' => $to_response->shortURL
-//                    ,'url_key' => $to_response->URLKey
+                    'baseURL' => $to_response->baseURL,
+                    'shortURL' => $to_response->shortURL
                 ]
             ];
         }
-        if (is_string($to_response)) {
-            $response = $to_response;
-        }
         if (is_array($to_response)) {
             $response = [
-                'type' => $to_response[0],
-                'message' => $to_response[1]
+                'type' => $to_response['type'],
+                'message' => $to_response['message']
             ];
+            if ($to_response['data']) {
+                $response['data'] = $to_response['data'];
+            }
         }
-        if (is_array($to_response) && $to_response['data']) {
-            $response['data'] = $to_response['data'];
-        }
-        /*if (is_array($to_response[2])) {
-            $response['data'] = [
-                'base_url' => $to_response->baseURL,
-                'short_url' => $to_response->shortURL,
-                'url_key' => $to_response->URLKey
-            ];
-        }*/
         echo json_encode($response);
     }
 
-    public static function getRow($columnName, $value)
+    public function __toString()
     {
-        self::connectToDatabase();
-        $query = "SELECT * FROM links WHERE $columnName='$value';";
-        if (self::$connection) {
-            $result = self::$connection->query($query);
-            $result = $result->fetch(PDO::FETCH_ASSOC);
-//            print_result($query, $result);
-            return $result;
+        return "baseURL = $this->baseURL<br>URLKey = $this->URLKey<br>shortURL = $this->shortURL<br>";
+    }
+
+//    получение полного пути для ссылки
+    private function createShortURL(string $URLKey)
+    {
+        $path = $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['SERVER_NAME'] . "/reducer";
+        if (self::SUPER_SHORT_URL_MODE) {
+            return "$path/$URLKey";
         } else {
-            self::giveResponse(['error', 'Соединение с базой не установлено!']);
+            return "$path/r.php?url_key=$URLKey";
         }
     }
 
-    public static function getShortURL($baseURL)
+    private function createURLKey()
     {
-        $result = self::getRow('base_url', $baseURL);
-//        print_result('', $result);
-        return $result['short_url'];
+        $random_string = null;
+        do {
+            $random_string = self::getRandomString(self::LENGTH);
+        } while (self::hasInDatabase('url_key', $random_string));
+        return $random_string;
     }
 
-    public static function getBaseURL($URLKey)
+    public function findURLKey(string $baseURL)
     {
-        $result = self::getRow('url_key', $URLKey);
-//        print_result('', $result);
-        return $result['base_url'];
+        self::connectToDatabase();
+        $result = self::$connection->query("SELECT url_key FROM links WHERE base_url='$baseURL';");
+//        var_dump($result->fetch());
+        return ($result->fetch())['url_key'];
+    }
+
+    public static function findBaseURL(string $URLKey)
+    {
+        self::connectToDatabase();
+        $result = self::$connection->query("SELECT base_url FROM links WHERE url_key='$URLKey';");
+        return ($result->fetch())['base_url'];
     }
 
     public function insert()
     {
-        self::connectToDatabase();
         self::createTable();
-        $query = "USE " . self::DB_NAME . "; INSERT INTO links (base_url, short_url, url_key) VALUES ('$this->baseURL', '$this->shortURL', '$this->URLKey');";
-        $result = self::$connection->query($query);
-//        print_result($query, $result->fetch(PDO::FETCH_ASSOC));
+        self::$connection->query(
+            "USE " . self::DB_NAME . "; INSERT INTO links (base_url, url_key) "
+            . " VALUES ('$this->baseURL', '$this->URLKey')");
     }
 
-    public static function hasInDatabase($columnName, $value)
+    public static function hasInDatabase(string $columnName, string $value)
     {
         self::connectToDatabase();
-        $query = "SELECT * FROM links WHERE $columnName='$value';";
-
-        if (self::$connection) {
-            /*$result = self::$connection->query($query);
-            $result = $result->fetch(PDO::FETCH_ASSOC);*/
-
-            $result = self::$connection->query($query);
-            if ($result == FALSE) {
-                self::giveResponse(['error', 'Эта противная ошибка']);
-                return FALSE;
-            }
-            $result = $result->fetch(PDO::FETCH_ASSOC);
-            
-//            print_result($query, $result);
-            if ($result) {
-                return TRUE;
-            }
-        } else {
-            self::giveResponse(['error', 'Соединение с базой не установлено!']);
+        $result = self::$connection->query("SELECT * FROM links WHERE $columnName='$value';");
+        if ($result->fetch()) {
+            return TRUE;
         }
+        return FALSE;
     }
 
     public static function createTable()
     {
+        self::connectToDatabase();
         $query = 'USE ' . self::DB_NAME . '; CREATE TABLE IF NOT EXISTS links (' .
             'id int NOT NULL PRIMARY KEY AUTO_INCREMENT,' .
             'base_url varchar(255) UNIQUE,' .
-            'short_url varchar(30) UNIQUE,' .
             'url_key varchar(20) UNIQUE);';
 
-        if (self::$connection) {
-            $result = self::$connection->query($query);
-//            print_result($query, $result->fetch(PDO::FETCH_ASSOC));
-        } else {
-            self::giveResponse(['error', 'Соединение с базой не установлено!']);
-        }
+        self::$connection->query($query);
     }
+
     public static function connectToDatabase()
     {
         self::$connection = new PDO('mysql: host=localhost; dbname=' . self::DB_NAME . '; charset=utf8', self::DB_ROOT , self::DB_PASS);
+        if (!self::$connection) {
+            self::giveResponse(['type' => 'error', 'message' => 'Соединение с базой не установлено!']);
+            die();
+        }
+        self::$connection->SetAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     }
 }
 
-function generate_random_string($required_length)
+// Класс-помощник, содержит вспомогательные функции, имеющие не такое прямое отношение к самим коротким ссылкам
+abstract class URL
 {
-    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
-    $count_chars = strlen($chars);
-    $string = '';
-    for ($i = 0; $i < $required_length; $i++) {
-        $string .= substr($chars, rand(1, $count_chars) - 1, 1);
+    public static function getRandomString(int $required_length)
+    {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+        $count_chars = strlen($chars);
+        $string = '';
+        for ($i = 0; $i < $required_length; $i++) {
+            $string .= substr($chars, rand(1, $count_chars) - 1, 1);
+        }
+        return $string;
     }
-    return $string;
-}
 
-function is_valid_url($string) {
-    if (preg_match("~^(http|https|ftp)://([A-Z0-9][A-Z0-9_-]*(?:.[A-Z0-9][A-Z0-9_-]*)+):?(d+)?/?~i", $string)) {
-        return true;
-    }
-    return false;
-//    return true;
-    /*if (filter_var($string, FILTER_VALIDATE_URL) === FALSE) {
+    public static function isValidURL(string $string) {
+        if (preg_match("~^(http|https|ftp)://([A-Z0-9][A-Z0-9_-]*(?:.[A-Z0-9][A-Z0-9_-]*)+):?(d+)?/?~i", $string)) {
+            return true;
+        }
         return false;
     }
-    return true;*/
-}
 
-function is_valid_url_key($string) {
-    return true;
-}
+    public static function isActiveURL(string $url) {
+//        return true;
+        $headers = get_headers($url);
+        $http_code = substr($headers[0], 9, 3);
+        if ($http_code >= 200 && $http_code < 300) {
+            return true;
+        }
+        return false;
 
-function print_message($message_text) {
-    echo $message_text;
-}
+    }
 
-function print_result($query, $result){
-    echo "Запрос = $query<br>";
-    echo "<pre>";
-    var_dump($result);
-    echo "</pre>";
+    public static function isValidURLKey(string $string) {
+        if (strlen($string) == ShortURL::LENGTH
+            && preg_match("/[A-Z0-9]/i", $string)) {
+            return true;
+        }
+        return false;
+    }
 }
