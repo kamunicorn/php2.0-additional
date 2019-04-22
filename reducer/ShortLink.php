@@ -123,7 +123,6 @@ class ShortURL extends URL implements iConnectionDatabase, iGiveResponse
     {
         self::connectToDatabase();
         $result = self::$connection->query("SELECT url_key FROM links WHERE base_url='$baseURL';");
-//        var_dump($result->fetch());
         return ($result->fetch())['url_key'];
     }
 
@@ -197,13 +196,13 @@ abstract class URL
 
     public static function isActiveURL(string $url) {
 //        return true;
+//       Распознает у https://vk.com и https://facebook.com http_code 301, 302
         $headers = get_headers($url);
         $http_code = substr($headers[0], 9, 3);
-        if ($http_code >= 200 && $http_code < 300) {
+        if ($http_code >= 200 && $http_code < 305) {
             return true;
         }
         return false;
-
     }
 
     public static function isValidURLKey(string $string) {

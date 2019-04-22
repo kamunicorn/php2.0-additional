@@ -1,18 +1,5 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Unicorn
- * Date: 11.04.2019
- * Time: 22:26
- */
-/**
- * Created by PhpStorm.
- * User: Unicorn
- * Date: 11.04.2019
- * Time: 21:29
- */
-
-require 'ShortLink.php';
+require_once 'ShortLink.php';
 
 if (isset($_GET['url_key'])) {
     $url_key = $_GET['url_key'];

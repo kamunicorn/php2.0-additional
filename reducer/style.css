@@ -29,6 +29,7 @@ h1 {
     border: none;
     outline: none;
     font-weight: bold;
+    padding: 10px;
 }
 .response {
     margin: 40px auto;
@@ -47,4 +48,31 @@ h1 {
     width: 49%;
     float: right;
     text-align: right;
+}
+
+@media (max-width: 479px) {
+    h1 {
+        font-size: 30px;
+    }
+    .form-reducer {
+        flex-wrap: wrap;
+    }
+    .form-reducer__link, .form-reducer__button {
+        width: 100%;
+    }
+    .form-reducer__button {
+        margin-top: 10px;
+    }
+    .response {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .response__message, .response__base-url, .response__short-url {
+        width: 100%;
+    }
+    .response__base-url, .response__short-url {
+        float: none;
+        text-align: left;
+        padding:0 10px 15px;
+    }
 }
